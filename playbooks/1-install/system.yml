@@ -1,24 +1,53 @@
+---
 - name: All hosts up-to-date
   hosts: control managed
   become: true
 
   tasks:
      - name: Enable CachyOs repo
-       shell: 'cd /tmp/ ; curl -O https://mirror.cachyos.org/cachyos-repo.tar.xz && tar xvf cachyos-repo.tar.xz ; cd cachyos-repo ; chmod +x ./cachyos-repo.sh && ./cachyos-repo.sh'
+       shell: |
+        mkdir /tmp/cuddleos/
+        cd /tmp/cuddleos/
+        curl -O https://mirror.cachyos.org/cachyos-repo.tar.xz
+        tar xvf cachyos-repo.tar.xz
+        cd cachyos-repo
+        chmod +x ./cachyos-repo.sh
+        ./cachyos-repo.sh
 
      - name: Full system upgrade
        community.general.pacman:
           update_cache: true
           upgrade: true
 
-    - name: Install Yay
-      shell: 'cd /tmp/ ; git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -rsi'
+     - name: Install git
+       community.general.pacman:
+          name: { { item } }
+          state: present
+       with_items:
+          - git
+
+     - name: Check if yay is installed
+       shell: 'which yay'
+       register: yay_check
+
+     - name: Install yay
+       shell: |
+        cd /tmp/
+        git clone https://aur.archlinux.org/yay.git
+        cd yay
+        makepkg -rsi
+       when: yay_check.rc != 0
+
+# TODO: ...
+#     - name: Install yay packages
+#       shell: 'yay install '
 
      - name: Install basic packages
        community.general.pacman:
           name: { { item } }
           state: present
        with_items:
+          - btop
           - p7zip
           - pfetch
           - unrar
@@ -28,7 +57,6 @@
           - udisks2
           - jshon
           - expac
-          - git
           - wget
           - acpid
           - net-tools
