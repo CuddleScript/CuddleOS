@@ -3,16 +3,27 @@
   hosts: localhost
   connection: local
   vars_prompt:
-     - name: 'user_password'
-       prompt: 'Enter user password'
-       private: true
-       encrypt: sha512_crypt
-       confirm: true
-       salt_size: 7
+    - name: "flavour"
+      prompt: "Which preset do you want? Enter [sarah/luzey]"
+      private: no
   tasks:
-     - name: Install and update packages
-       become: yes
-       import_tasks: 'playbooks/1-install/system.yml'
-     - name: Change some settings
-       become: yes
-       import_tasks: 'playbooks/1-install/config.yml'
+    - set_fact:
+        flavour: '{{ flavour }}'
+
+    - name: Install and update packages
+      become: yes
+      import_tasks: 'playbooks/1-install/system.yml'
+
+    - name: Apply some system tweaks
+      become: yes
+      import_tasks: 'playbooks/1-install/tweaks.yml'
+
+    - name: Import Lucys preset if chosen
+      become: yes
+      import_tasks: 'playbooks/2-flavours/luzey.yml'
+      when: flavour|string == "luzey"
+
+    - name: Import Sarahs preset if chosen
+      become: yes
+      import_tasks: 'playbooks/2-flavours/sarah.yml'
+      when: flavour|string == "sarah"

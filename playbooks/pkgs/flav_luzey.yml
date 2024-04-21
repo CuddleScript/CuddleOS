@@ -1,4 +1,5 @@
-misc_packages:
+---
+yay_packages:
    - ananicy-cpp
    - irqbalance
    - nohang
@@ -22,7 +23,7 @@ misc_packages:
    - uksmd
    - realtime-privileges
 
-misc_services:
+services:
    - ananicy-cpp
    - irqbalance
    - memavaild
