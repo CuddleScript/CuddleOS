@@ -13,3 +13,7 @@
     - name: Install and update packages
       become: true
       import_tasks: 'playbooks/1-install/system.yml'
+  tasks:
+    - name: Change some settings
+      become: true
+      import_tasks: 'playbooks/1-install/config.yml'
