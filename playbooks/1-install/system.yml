@@ -33,7 +33,7 @@
 
 - name: Include basic package list
   include_vars:
-     file: '../lists/basic_packages.yaml'
+     file: '../lists/basic_system_lists.yaml'
 
 - name: Install Basic Packages
   shell: 'sudo pacman --needed --noconfirm -Sdd {{ item }}'
