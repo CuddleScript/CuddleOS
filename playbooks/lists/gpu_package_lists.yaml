@@ -1,0 +1,17 @@
+---
+amd_packages:
+   - radeon-profile-daemon-git
+   - radeon-profile-git
+   - libva-mesa-driver
+   - lib32-libva-mesa-driver
+   - mesa-vdpau
+   - lib32-mesa-vdpau
+   - libva-vdpau-driver
+   - lib32-libva-vdpau-driver
+   - vulkan-radeon
+   - lib32-vulkan-radeon
+
+nvidia_packages: [] # No specific NVIDIA packages listed here as an example
+
+intel_packages:
+   - vulkan-intel
