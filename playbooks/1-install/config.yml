@@ -1,18 +1,21 @@
 ---
 - name: Set swappieness
+  become: yes
   template:
-     src: ../templates/swappiness.conf.j2
+     src: ./../templates/swappiness.conf.j2
      dest: /etc/sysctl.d/99-swappiness.conf
 
 - name: Apply sysctl settings
   shell: sysctl --system
 
-- name: SetVar Stuff
+- name: Set Esync Variable
   shell: 'ulimit -Hn'
+  become: yes
   register: esync_value
   check_mode: false
 
 - name: Fix Esync Value
+  become: yes
   shell: |
      echo "DefaultLimitNOFILE=1024:1048576" | sudo tee /etc/systemd/system.conf && \
      echo "DefaultLimitNOFILE=1024:1048576" | sudo tee /etc/systemd/user.conf
