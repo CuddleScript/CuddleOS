@@ -1,0 +1,15 @@
+- name: Recieve permission
+  become: true
+
+- name: Set swappieness
+  template:
+     src: ../templates/swappiness.conf.j2
+     dest: /etc/sysctl.d/99-swappiness.conf
+  notify: Apply sysctl settings
+
+  handlers:
+     - name: Apply sysctl settings
+       command: sysctl --system
+
+- name: Check Esync
+  command: echo ulimit -Hn

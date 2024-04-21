@@ -44,4 +44,12 @@ wine_packages:
    - gtk3
    - lib32-gtk3
    - gst-plugins-base-libs
-   - lib32-gst-plugins-base-libs
+   - lib32-gst-plugins-base-libs 
+   - vkd3d 
+   - lib32-vkd3d 
+   - faudio 
+   - lib32-faudio
+   - lutris 
+   - steam 
+   - gamemode 
+   - lib32-gamemode
