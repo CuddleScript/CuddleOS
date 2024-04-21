@@ -1,8 +1,8 @@
 - name: Enable CachyOs repo
   shell: |
-   sudo pacman-key --recv-keys F3B607488DB35A47 --keyserver keyserver.ubuntu.com
-   sudo pacman-key --lsign-key F3B607488DB35A47
-   sudo pacman --needed --noconfirm -U 'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-keyring-20240331-1-any.pkg.tar.zst' 'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-mirrorlist-18-1-any.pkg.tar.zst' 'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v3-mirrorlist-18-1-any.pkg.tar.zst' 'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v4-mirrorlist-6-1-any.pkg.tar.zst' 'https://mirror.cachyos.org/repo/x86_64/cachyos/pacman-6.1.0-5-x86_64.pkg.tar.zst'
+     sudo pacman-key --recv-keys F3B607488DB35A47 --keyserver keyserver.ubuntu.com
+     sudo pacman-key --lsign-key F3B607488DB35A47
+     sudo pacman --needed --noconfirm -U 'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-keyring-20240331-1-any.pkg.tar.zst' 'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-mirrorlist-18-1-any.pkg.tar.zst' 'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v3-mirrorlist-18-1-any.pkg.tar.zst' 'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v4-mirrorlist-6-1-any.pkg.tar.zst' 'https://mirror.cachyos.org/repo/x86_64/cachyos/pacman-6.1.0-5-x86_64.pkg.tar.zst'
 
 - name: Full system upgrade
   community.general.pacman:
@@ -10,7 +10,7 @@
      upgrade: true
 
 - name: Install base-devel and git
-  shell: 'sudo pacman --needed --noconfirm -S git'
+  shell: 'sudo pacman --needed --noconfirm -S git base-devel'
 
 - name: Check if yay is installed
   shell: 'which yay'
@@ -18,49 +18,26 @@
 
 - name: Install yay
   shell: |
-   rm -rf /tmp/yay/
-   cd /tmp/
-   git clone https://aur.archlinux.org/yay.git
-   cd yay
-   makepkg -rsi
-   cd ..
-   rm -rf /tmp/yay/
+     rm -rf /tmp/yay/
+     cd /tmp/
+     git clone https://aur.archlinux.org/yay.git
+     cd yay
+     makepkg -rsi
+     cd ..
+     rm -rf /tmp/yay/
   when: yay_check.rc != 0
 
 # TODO: ...
 #     - name: Install yay packages
 #       shell: 'yay install '
 
-- name: Install basic packages
-  shell: |
-   sudo pacman --needed --noconfirm -Sdd \
-    btop \
-    neofetch \
-    btop \
-    neofetch \
-    unrar \
-    unarchiver \
-    unace \
-    xz \
-    udisks2 \
-    jshon \
-    expac \
-    wget \
-    acpid \
-    net-tools \
-    xdg-user-dirs \
-    xf86-input-synaptics \
-    xf86-input-libinput \
-    xf86-input-evdev \
-    mesa \
-    lib32-mesa \
-    vulkan-icd-loader \
-    lib32-vulkan-icd-loader \
-    alsa-utils \
-    pipewire \
-    pipewire-pulse \
-    pipewire-jack \
-    wireplumber
+- name: Include basic package list
+  include_vars:
+     file: '../lists/basic_packages.yaml'
+
+- name: Install Basic Packages
+  shell: 'sudo pacman --needed --noconfirm -Sdd {{ item }}'
+  loop: '{{ basic_packages }}'
 
 - name: Check if HDD or SSD
   shell: 'cat /sys/block/sda/queue/rotational'
@@ -70,4 +47,34 @@
   command: 'fstrim -av'
   when: is_ssd.stdout|int == 0
 
-#- name: Determine Hardware for further installation
+- name: Check GPU Vendor
+  hosts: localhost
+  gather_facts: no
+
+- name: Check GPU Vendor
+  command: 'lspci | grep -i vga'
+  register: gpu_info
+
+- name: Set GPU Vendor Fact
+  set_fact:
+     gpu_vendor: >
+        {{
+          'NVIDIA' if 'NVIDIA' in gpu_info.stdout else
+          'Intel' if 'Intel' in gpu_info.stdout else
+          'AMD' if 'AMD' in gpu_info.stdout else
+          'Unknown'
+        }}
+
+- name: Include GPU vendor-specific package list
+  include_vars:
+     file: '../lists/gpu_package_list.yaml'
+
+- name: Install GPU Drivers
+  shell: 'sudo pacman --needed --noconfirm -Sdd {{ item }}'
+  loop: '{{ gpu_packages }}'
+  when: gpu_vendor == item.0
+  vars:
+     gpu_packages:
+        - [AMD, '{{ amd_packages }}']
+        - [NVIDIA, '{{ nvidia_packages }}']
+        - [Intel, '{{ intel_packages }}']
