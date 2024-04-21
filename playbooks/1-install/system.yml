@@ -60,6 +60,7 @@
           'AMD' if 'AMD' in gpu_info.stdout else
           'Unknown'
         }}
+  ignore_errors: true
 
 - name: Include GPU vendor-specific package list
   include_vars:
