@@ -1,85 +1,84 @@
 - name: Enable CachyOs repo
   shell: |
-     sudo pacman-key --recv-keys F3B607488DB35A47 --keyserver keyserver.ubuntu.com
-     sudo pacman-key --lsign-key F3B607488DB35A47
-     sudo pacman --needed --noconfirm -U 'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-keyring-20240331-1-any.pkg.tar.zst' 'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-mirrorlist-18-1-any.pkg.tar.zst' 'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v3-mirrorlist-18-1-any.pkg.tar.zst' 'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v4-mirrorlist-6-1-any.pkg.tar.zst' 'https://mirror.cachyos.org/repo/x86_64/cachyos/pacman-6.1.0-5-x86_64.pkg.tar.zst'
-
+     pacman-key --recv-keys F3B607488DB35A47 --keyserver keyserver.ubuntu.com
+     pacman-key --lsign-key F3B607488DB35A47
+     pacman --needed --noconfirm -U \
+      'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-keyring-20240331-1-any.pkg.tar.zst' \
+      'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-mirrorlist-18-1-any.pkg.tar.zst' \
+      'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v3-mirrorlist-18-1-any.pkg.tar.zst' \
+      'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v4-mirrorlist-6-1-any.pkg.tar.zst' \
+      'https://mirror.cachyos.org/repo/x86_64/cachyos/pacman-6.1.0-5-x86_64.pkg.tar.zst'
+ 
 - name: Full system upgrade
   community.general.pacman:
      update_cache: true
      upgrade: true
-
+ 
 - name: Install base-devel and git
-  shell: 'sudo pacman --needed --noconfirm -S git base-devel'
-
+  community.general.pacman:
+    name:
+      - base-devel
+      - git
+    state: present
+    reason: explicit
+    reason_for: all
+ 
 - name: Check if yay is installed
   shell: 'which yay'
   register: yay_check
-
+ 
 - name: Install yay
   shell: |
-     rm -rf /tmp/yay/
-     cd /tmp/
-     git clone https://aur.archlinux.org/yay.git
-     cd yay
+     rm -rf /tmp/yay/ && cd /tmp/
+     git clone https://aur.archlinux.org/yay.git && cd yay
      makepkg -rsi
-     cd ..
-     rm -rf /tmp/yay/
-  when: yay_check.rc != 0
-
+     cd .. && rm -rf /tmp/yay/
+  when: yay_check.rc|int != 0
+ 
 # TODO: ...
 #     - name: Install yay packages
 #       shell: 'yay install '
-
+ 
 - name: Include basic package list
   include_vars:
      file: '../lists/basic_system_lists.yaml'
-
+ 
 - name: Install Basic Packages
-  shell: 'sudo pacman --needed --noconfirm -Sdd {{ item }}'
-  loop: '{{ basic_packages }}'
-
+  community.general.pacman:
+    name: '{{ basic_packages }}'
+    state: present
+    reason: explicit
+    reason_for: all
+ 
 - name: Check if HDD or SSD
   shell: 'cat /sys/block/sda/queue/rotational'
   register: is_ssd
-
+ 
 - name: Enable fstrim if SSD is found
   shell: 'fstrim -av'
   when: is_ssd.stdout|int == 0
-
+ 
 - name: Check GPU Vendor
-  shell: 'lspci | grep -i vga'
+  shell: lspci | grep -i VGA | awk '!/NVIDIA|AMD|Intel/'
   register: gpu_info
-
-- name: Set GPU Vendor Fact
-  set_fact:
-     gpu_vendor: >
-        {{
-          'NVIDIA' if 'NVIDIA' in gpu_info.stdout else
-          'Intel' if 'Intel' in gpu_info.stdout else
-          'AMD' if 'AMD' in gpu_info.stdout else
-          'Unknown'
-        }}
-
+ 
 - name: Include GPU vendor-specific package list
   include_vars:
      file: '../lists/gpu_package_lists.yaml'
-  when: gpu_vendor|string != 'Unknown'
+
+- name: Set GPU Vendor Facts
+  ansible.builtin.set_fact:
+     gpu_vendor: >-
+        {{ ('NVIDIA' if 'NVIDIA' in gpu_info.stdout else
+           'Intel' if 'Intel' in gpu_info.stdout else
+           'AMD' if 'AMD' in gpu_info.stdout else
+           'Unknown') | trim }}
+     gpu_packages: {'AMD': '{{ amd_packages }}', 'NVIDIA': '{{ nvidia_packages }}', 'Intel': '{{ intel_packages }}'}
 
 - name: Install GPU Drivers
-  shell: 'sudo pacman --needed --noconfirm -Sdd {{ item }}'
-  loop: '{{ gpu_packages }}'
-  when: gpu_vendor == item.0
-  vars:
-     gpu_packages:
-        - [AMD, '{{ amd_packages }}']
-        - [NVIDIA, '{{ nvidia_packages }}']
-        - [Intel, '{{ intel_packages }}']
-
-- name: Include wine-package list
-  include_vars:
-     file: '../lists/wine_lists.yml'
-
-- name: Install wine packages
-  shell: 'sudo pacman --needed --noconfirm {{ item }}'
-  loop: '{{ wine_packages }}'
+  community.general.pacman:
+    name: '{{ gpu_packages[gpu_vendor] }}'
+    state: present
+    reason: explicit
+    reason_for: all
+  when: gpu_vendor|string != "Unknown"
