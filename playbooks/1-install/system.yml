@@ -59,28 +59,26 @@
   when: is_ssd.stdout|int == 0
  
 - name: Check GPU Vendor
-  shell: 'lspci | grep -i vga'
+  shell: lspci | grep -i VGA | awk '!/NVIDIA|AMD|Intel/'
   register: gpu_info
- 
-- name: Set GPU Vendor Fact
-  set_fact:
-     gpu_vendor: >
-        {{
-          'NVIDIA' if 'NVIDIA' in gpu_info.stdout else
-          'Intel' if 'Intel' in gpu_info.stdout else
-          'AMD' if 'AMD' in gpu_info.stdout else
-          'Unknown'
-        }}
  
 - name: Include GPU vendor-specific package list
   include_vars:
      file: '../lists/gpu_package_lists.yaml'
-  when: gpu_vendor|string != 'Unknown'
+
+- name: Set GPU Vendor Facts
+  ansible.builtin.set_fact:
+     gpu_vendor: >
+        {{ 'NVIDIA' if 'NVIDIA' in gpu_info.stdout else 'Intel' if 'Intel' in gpu_info.stdout else 'AMD' if 'AMD' in gpu_info.stdout else 'Unknown' }}
+     gpu_packages: {'AMD': '{{ amd_packages }}', 'NVIDIA': '{{ nvidia_packages }}', 'Intel': '{{ intel_packages }}'}
+
+- name: Print gpu
+  ansible.builtin.debug:
+    msg: '{{ gpu_vendor }}'
 
 - name: Install GPU Drivers
   community.general.pacman:
-    name: '{{ gpu_packages }}'
+    name: '{{ gpu_packages[gpu_vendor] }}'
     state: present
     reason: explicit
     reason_for: all
-  when: gpu_vendor == item.0
