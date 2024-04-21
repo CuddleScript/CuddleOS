@@ -1,57 +1,73 @@
-- name: All hosts up-to-date
-  hosts: control managed
-  become: true
+- name: Enable CachyOs repo
+  shell: |
+   sudo pacman-key --recv-keys F3B607488DB35A47 --keyserver keyserver.ubuntu.com
+   sudo pacman-key --lsign-key F3B607488DB35A47
+   sudo pacman --needed --noconfirm -U 'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-keyring-20240331-1-any.pkg.tar.zst' 'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-mirrorlist-18-1-any.pkg.tar.zst' 'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v3-mirrorlist-18-1-any.pkg.tar.zst' 'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v4-mirrorlist-6-1-any.pkg.tar.zst' 'https://mirror.cachyos.org/repo/x86_64/cachyos/pacman-6.1.0-5-x86_64.pkg.tar.zst'
 
-  tasks:
-     - name: Enable CachyOs repo
-       shell: 'cd /tmp/ ; curl -O https://mirror.cachyos.org/cachyos-repo.tar.xz && tar xvf cachyos-repo.tar.xz ; cd cachyos-repo ; chmod +x ./cachyos-repo.sh && ./cachyos-repo.sh'
+- name: Full system upgrade
+  community.general.pacman:
+     update_cache: true
+     upgrade: true
 
-     - name: Full system upgrade
-       community.general.pacman:
-          update_cache: true
-          upgrade: true
+- name: Install base-devel and git
+  shell: 'sudo pacman --needed --noconfirm -S git'
 
-    - name: Install Yay
-      shell: 'cd /tmp/ ; git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -rsi'
+- name: Check if yay is installed
+  shell: 'which yay'
+  register: yay_check
 
-     - name: Install basic packages
-       community.general.pacman:
-          name: { { item } }
-          state: present
-       with_items:
-          - p7zip
-          - pfetch
-          - unrar
-          - unarchiver
-          - unace
-          - xz
-          - udisks2
-          - jshon
-          - expac
-          - git
-          - wget
-          - acpid
-          - net-tools
-          - xdg-user-dirs
-          - xf86-input-synaptics
-          - xf86-input-libinput
-          - xf86-input-evdev
-          - mesa
-          - lib32-mesa
-          - vulkan-icd-loader
-          - lib32-vulkan-icd-loader
-          - alsa-utils
-          - pipewire
-          - pipewire-pulse
-          - pipewire-jack
-          - wireplumber
+- name: Install yay
+  shell: |
+   rm -rf /tmp/yay/
+   cd /tmp/
+   git clone https://aur.archlinux.org/yay.git
+   cd yay
+   makepkg -rsi
+   cd ..
+   rm -rf /tmp/yay/
+  when: yay_check.rc != 0
 
-     - name: Check if HDD or SSD
-       shell: cat "/sys/block/{{ satellite_physical_disk }}/queue/rotational"
-       register: is_ssd
+# TODO: ...
+#     - name: Install yay packages
+#       shell: 'yay install '
 
-     - name: Enable fstrim if SSD is found
-       command: 'fstrim -av'
-       when: is_ssd.stdout|int == 0
+- name: Install basic packages
+  shell: |
+   sudo pacman --needed --noconfirm -Sdd \
+    btop \
+    neofetch \
+    btop \
+    neofetch \
+    unrar \
+    unarchiver \
+    unace \
+    xz \
+    udisks2 \
+    jshon \
+    expac \
+    wget \
+    acpid \
+    net-tools \
+    xdg-user-dirs \
+    xf86-input-synaptics \
+    xf86-input-libinput \
+    xf86-input-evdev \
+    mesa \
+    lib32-mesa \
+    vulkan-icd-loader \
+    lib32-vulkan-icd-loader \
+    alsa-utils \
+    pipewire \
+    pipewire-pulse \
+    pipewire-jack \
+    wireplumber
 
-     - name: Determine Hardware for further installation
+- name: Check if HDD or SSD
+  shell: 'cat /sys/block/sda/queue/rotational'
+  register: is_ssd
+
+- name: Enable fstrim if SSD is found
+  command: 'fstrim -av'
+  when: is_ssd.stdout|int == 0
+
+#- name: Determine Hardware for further installation
