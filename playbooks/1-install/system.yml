@@ -48,10 +48,6 @@
   when: is_ssd.stdout|int == 0
 
 - name: Check GPU Vendor
-  hosts: localhost
-  gather_facts: no
-
-- name: Check GPU Vendor
   command: 'lspci | grep -i vga'
   register: gpu_info
 
