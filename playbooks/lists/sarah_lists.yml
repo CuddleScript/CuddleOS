@@ -1,0 +1,16 @@
+misc_packages:
+   - ananicy-cpp
+   - irqbalance
+   - nohang
+   - preload
+   - prelockd
+   - uresourced
+
+misc_services:
+   - ananicy-cpp
+   - irqbalance
+   - memavaild
+   - nohang
+   - preload
+   - prelockd
+   - uresourced

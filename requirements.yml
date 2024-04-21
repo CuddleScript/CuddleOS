@@ -3,3 +3,4 @@ collections:
    - name: community.general
      version: '>=8.5.0'
      source: https://galaxy.ansible.com
+   - name: kewlfft.aur
