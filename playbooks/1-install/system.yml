@@ -2,15 +2,28 @@
   shell: |
      sudo pacman-key --recv-keys F3B607488DB35A47 --keyserver keyserver.ubuntu.com
      sudo pacman-key --lsign-key F3B607488DB35A47
-     sudo pacman --needed --noconfirm -U 'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-keyring-20240331-1-any.pkg.tar.zst' 'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-mirrorlist-18-1-any.pkg.tar.zst' 'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v3-mirrorlist-18-1-any.pkg.tar.zst' 'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v4-mirrorlist-6-1-any.pkg.tar.zst' 'https://mirror.cachyos.org/repo/x86_64/cachyos/pacman-6.1.0-5-x86_64.pkg.tar.zst'
+     sudo pacman --needed --noconfirm -U \
+      'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-keyring-20240331-1-any.pkg.tar.zst' \
+      'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-mirrorlist-18-1-any.pkg.tar.zst' \
+      'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v3-mirrorlist-18-1-any.pkg.tar.zst' \
+      'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v4-mirrorlist-6-1-any.pkg.tar.zst' \
+      'https://mirror.cachyos.org/repo/x86_64/cachyos/pacman-6.1.0-5-x86_64.pkg.tar.zst'
 
 - name: Full system upgrade
   community.general.pacman:
      update_cache: true
      upgrade: true
+  changed: true
 
 - name: Install base-devel and git
-  shell: 'sudo pacman --needed --noconfirm -S git base-devel'
+  community.general.pacman:
+    name:
+      - base-devel
+      - git
+    state: present
+    reason: explicit
+    reason_for: all
+  extra_args: --needed --noconfirm
 
 - name: Check if yay is installed
   shell: 'which yay'
@@ -18,14 +31,11 @@
 
 - name: Install yay
   shell: |
-     rm -rf /tmp/yay/
-     cd /tmp/
-     git clone https://aur.archlinux.org/yay.git
-     cd yay
+     rm -rf /tmp/yay/ && cd /tmp/
+     git clone https://aur.archlinux.org/yay.git && cd yay
      makepkg -rsi
-     cd ..
-     rm -rf /tmp/yay/
-  when: yay_check.rc != 0
+     cd .. && rm -rf /tmp/yay/
+  when: yay_check.rc|int != 0
 
 # TODO: ...
 #     - name: Install yay packages
@@ -36,8 +46,12 @@
      file: '../lists/basic_system_lists.yaml'
 
 - name: Install Basic Packages
-  shell: 'sudo pacman --needed --noconfirm -Sdd {{ item }}'
-  loop: '{{ basic_packages }}'
+  community.general.pacman:
+    name: '{{ basic_packages }}'
+    state: present
+    reason: explicit
+    reason_for: all
+  extra_args: --needed --noconfirm
 
 - name: Check if HDD or SSD
   shell: 'cat /sys/block/sda/queue/rotational'
