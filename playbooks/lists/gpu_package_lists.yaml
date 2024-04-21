@@ -1,7 +1,8 @@
 ---
 amd_packages:
-   - radeon-profile-daemon-git
-   - radeon-profile-git
+# TODO: ... | add to yay install-sequence
+#   - radeon-profile-daemon-git
+#   - radeon-profile-git
    - libva-mesa-driver
    - lib32-libva-mesa-driver
    - mesa-vdpau
