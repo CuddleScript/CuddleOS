@@ -44,11 +44,11 @@
   register: is_ssd
 
 - name: Enable fstrim if SSD is found
-  command: 'fstrim -av'
+  shell: 'fstrim -av'
   when: is_ssd.stdout|int == 0
 
 - name: Check GPU Vendor
-  command: 'lspci | grep -i vga'
+  shell: 'lspci | grep -i vga'
   register: gpu_info
 
 - name: Set GPU Vendor Fact
@@ -60,11 +60,11 @@
           'AMD' if 'AMD' in gpu_info.stdout else
           'Unknown'
         }}
-  ignore_errors: true
 
 - name: Include GPU vendor-specific package list
   include_vars:
-     file: '../lists/gpu_package_list.yaml'
+     file: '../lists/gpu_package_lists.yaml'
+  when: gpu_vendor|string != 'Unknown'
 
 - name: Install GPU Drivers
   shell: 'sudo pacman --needed --noconfirm -Sdd {{ item }}'
