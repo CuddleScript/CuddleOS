@@ -5,6 +5,22 @@ misc_packages:
    - preload
    - prelockd
    - uresourced
+   - pipewire-pulse
+   - pipewire-jack
+   - lib32-pipewire-jack
+   - alsa-plugins
+   - alsa-firmware
+   - sof-firmware
+   - alsa-card-profiles
+   - llvm 
+   - clang 
+   - lld 
+   - mold 
+   - openmp
+   - ccache
+   - dbus-broker
+   - uksmd
+   - realtime-privileges
 
 misc_services:
    - ananicy-cpp
@@ -14,3 +30,8 @@ misc_services:
    - preload
    - prelockd
    - uresourced
+   - uksmd
+   - pipewire 
+   - pipewire.socket 
+   - pipewire-pulse 
+   - wireplumber

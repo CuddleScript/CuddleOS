@@ -10,10 +10,9 @@
        confirm: true
        salt_size: 7
   tasks:
-    - name: Install and update packages
-      become: yes
-      import_tasks: 'playbooks/1-install/system.yml'
-  tasks:
-    - name: Change some settings
-      become: yes
-      import_tasks: 'playbooks/1-install/config.yml'
+     - name: Install and update packages
+       become: yes
+       import_tasks: 'playbooks/1-install/system.yml'
+     - name: Change some settings
+       become: yes
+       import_tasks: 'playbooks/1-install/config.yml'
