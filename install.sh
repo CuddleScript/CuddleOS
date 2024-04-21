@@ -1,4 +1,6 @@
 #!/bin/bash
-sudo pacman -S ansible
+sudo pacman --needed --noconfirm -S \
+ extra/python-passlib \
+ ansible
 ansible-galaxy collection install -r collections.yml
-ansible-playbook playbook.yml --ask-become-pass
+ansible-playbook playbook.yml

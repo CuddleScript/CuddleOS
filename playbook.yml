@@ -2,8 +2,6 @@
 - name: Arch
   hosts: localhost
   connection: local
-  gather_facts: yes
-  become: false
   vars_prompt:
      - name: 'user_password'
        prompt: 'Enter user password'
@@ -12,12 +10,6 @@
        confirm: true
        salt_size: 7
   tasks:
-     - name: Determine Distro
-       debug: msg="{{ ansible_distribution }}"
-
-     - name: Install and update packages
-       become: true
-       import_tasks: 'playbooks/1-install/system.yml'
-
-     - name: Install and update system packages
-       become: true
+    - name: Install and update packages
+      become: true
+      import_tasks: 'playbooks/1-install/system.yml'
