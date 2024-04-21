@@ -1,8 +1,8 @@
 - name: Enable CachyOs repo
   shell: |
-     sudo pacman-key --recv-keys F3B607488DB35A47 --keyserver keyserver.ubuntu.com
-     sudo pacman-key --lsign-key F3B607488DB35A47
-     sudo pacman --needed --noconfirm -U \
+     pacman-key --recv-keys F3B607488DB35A47 --keyserver keyserver.ubuntu.com
+     pacman-key --lsign-key F3B607488DB35A47
+     pacman --needed --noconfirm -U \
       'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-keyring-20240331-1-any.pkg.tar.zst' \
       'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-mirrorlist-18-1-any.pkg.tar.zst' \
       'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v3-mirrorlist-18-1-any.pkg.tar.zst' \
@@ -68,13 +68,12 @@
 
 - name: Set GPU Vendor Facts
   ansible.builtin.set_fact:
-     gpu_vendor: >
-        {{ 'NVIDIA' if 'NVIDIA' in gpu_info.stdout else 'Intel' if 'Intel' in gpu_info.stdout else 'AMD' if 'AMD' in gpu_info.stdout else 'Unknown' }}
+     gpu_vendor: >-
+        {{ ('NVIDIA' if 'NVIDIA' in gpu_info.stdout else
+           'Intel' if 'Intel' in gpu_info.stdout else
+           'AMD' if 'AMD' in gpu_info.stdout else
+           'Unknown') | trim }}
      gpu_packages: {'AMD': '{{ amd_packages }}', 'NVIDIA': '{{ nvidia_packages }}', 'Intel': '{{ intel_packages }}'}
-
-- name: Print gpu
-  ansible.builtin.debug:
-    msg: '{{ gpu_vendor }}'
 
 - name: Install GPU Drivers
   community.general.pacman:
@@ -82,3 +81,4 @@
     state: present
     reason: explicit
     reason_for: all
+  when: gpu_vendor|string != "Unknown"
