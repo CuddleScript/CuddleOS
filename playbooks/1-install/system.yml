@@ -75,3 +75,11 @@
         - [AMD, '{{ amd_packages }}']
         - [NVIDIA, '{{ nvidia_packages }}']
         - [Intel, '{{ intel_packages }}']
+
+- name: Include wine-package list
+  include_vars:
+     file: '../lists/wine_lists.yml'
+
+- name: Install wine packages
+  shell: 'sudo pacman --needed --noconfirm {{ item }}'
+  loop: '{{ wine_packages }}'

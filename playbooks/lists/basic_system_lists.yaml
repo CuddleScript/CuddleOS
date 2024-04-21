@@ -1,3 +1,4 @@
+---
 basic_packages:
    - btop
    - neofetch
@@ -24,3 +25,4 @@ basic_packages:
    - pipewire-pulse
    - pipewire-jack
    - wireplumber
+   - ntfs-3g
