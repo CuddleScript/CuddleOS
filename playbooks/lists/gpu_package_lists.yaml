@@ -11,7 +11,12 @@ amd_packages:
    - vulkan-radeon
    - lib32-vulkan-radeon
 
-nvidia_packages: [] # No specific NVIDIA packages listed here as an example
+nvidia_packages:
+   - nvidia
+   - nvidia-utils
+   - lib32-nvidia-utils
+   - libvdpau
+   - lib32-libvdpau
 
 intel_packages:
    - vulkan-intel
