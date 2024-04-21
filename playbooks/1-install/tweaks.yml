@@ -1,0 +1,63 @@
+- name: Check if HDD or SSD
+  shell: 'cat /sys/block/sda/queue/rotational'
+  register: is_ssd
+
+- name: Enable fstrim if SSD is found
+  shell: 'fstrim -av'
+  when: is_ssd.stdout|int == 0
+
+- name: Set swappiness
+  become: yes
+  template:
+     src: ./../templates/swappiness.conf.j2
+     dest: /etc/sysctl.d/99-swappiness.conf
+
+- name: Apply system-control settings
+  shell: sysctl --system
+
+- name: Set Esync variables
+  shell: 'ulimit -Hn'
+  become: yes
+  register: esync_value
+  check_mode: false
+
+- name: Fix Esync values
+  become: yes
+  shell: |
+     echo "DefaultLimitNOFILE=1024:1048576" | tee /etc/systemd/system.conf && \
+     echo "DefaultLimitNOFILE=1024:1048576" | tee /etc/systemd/user.conf
+  when: esync_value.stdout|int >= 524288
+
+- name: Disable systemd-oomd
+  service:
+     name: 'systemd-oomd'
+     enabled: no
+
+- name: Setting up I/O Schedulers
+  become: yes
+  template:
+     src: ./../templates/60-ioschedulers.rules.j2
+     dest: /etc/udev/rules.d/60-ioschedulers.rules
+
+- name: Enable keyring timer
+  become: yes
+  service:
+     name: 'archlinux-keyring-wkd-sync.timer'
+     enabled: yes
+
+- name: Pacman Config Tweaks
+  become: yes
+  lineinfile:
+     path: /etc/pacman.conf
+     regexp: '/#ParallelDownloads/i'
+     line: 'ParallelDownloads=6 \n DisableDownloadTimeout'
+
+- name: Enable realtime privileges
+  become: yes
+  shell: 'usermod -aG realtime "$(whoami)"'
+
+- name: change environment
+  become: yes
+  shell: |
+     echo "mesa_glthread=true" | tee /etc/environment
+     echo "__GL_THREADED_OPTIMIZATIONS=1" | tee /etc/environment

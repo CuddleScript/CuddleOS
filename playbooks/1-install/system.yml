@@ -10,12 +10,12 @@
       'https://mirror.cachyos.org/repo/x86_64/cachyos/pacman-6.1.0-5-x86_64.pkg.tar.zst'
  
 - name: Full system upgrade
-  community.general.pacman:
+  pacman:
      update_cache: true
      upgrade: true
  
 - name: Install base-devel and git
-  community.general.pacman:
+  pacman:
     name:
       - base-devel
       - git
@@ -23,40 +23,16 @@
     reason: explicit
     reason_for: all
  
-- name: Check if yay is installed
-  shell: 'which yay'
-  register: yay_check
- 
-- name: Install yay
-  shell: |
-     rm -rf /tmp/yay/ && cd /tmp/
-     git clone https://aur.archlinux.org/yay.git && cd yay
-     makepkg -rsi
-     cd .. && rm -rf /tmp/yay/
-  when: yay_check.rc|int != 0
- 
-# TODO: ...
-#     - name: Install yay packages
-#       shell: 'yay install '
- 
 - name: Include basic package list
   include_vars:
-     file: '../lists/basic_system_lists.yaml'
+     file: '../pkgs/system.yaml'
  
 - name: Install Basic Packages
-  community.general.pacman:
+  pacman:
     name: '{{ basic_packages }}'
     state: present
     reason: explicit
     reason_for: all
- 
-- name: Check if HDD or SSD
-  shell: 'cat /sys/block/sda/queue/rotational'
-  register: is_ssd
- 
-- name: Enable fstrim if SSD is found
-  shell: 'fstrim -av'
-  when: is_ssd.stdout|int == 0
  
 - name: Check GPU Vendor
   shell: lspci | grep -i VGA | awk '!/NVIDIA|AMD|Intel/'
@@ -64,10 +40,10 @@
  
 - name: Include GPU vendor-specific package list
   include_vars:
-     file: '../lists/gpu_package_lists.yaml'
+     file: '../pkgs/system_gpu.yaml'
 
 - name: Set GPU Vendor Facts
-  ansible.builtin.set_fact:
+  set_fact:
      gpu_vendor: >-
         {{ ('NVIDIA' if 'NVIDIA' in gpu_info.stdout else
            'Intel' if 'Intel' in gpu_info.stdout else
@@ -76,7 +52,7 @@
      gpu_packages: {'AMD': '{{ amd_packages }}', 'NVIDIA': '{{ nvidia_packages }}', 'Intel': '{{ intel_packages }}'}
 
 - name: Install GPU Drivers
-  community.general.pacman:
+  pacman:
     name: '{{ gpu_packages[gpu_vendor] }}'
     state: present
     reason: explicit

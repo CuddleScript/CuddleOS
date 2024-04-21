@@ -1,0 +1,41 @@
+---
+# kewl stuff :p
+
+- name: Create the `aur_builder` user
+  become: yes
+  user:
+     name: aur_builder
+     create_home: yes
+     group: wheel
+
+- name: Allow the `aur_builder` user to run `sudo pacman` without a password
+  become: yes
+  lineinfile:
+    path: /etc/sudoers.d/11-install-aur_builder
+    line: 'aur_builder ALL=(ALL) NOPASSWD: /usr/bin/pacman'
+    create: yes
+    mode: 0644
+    validate: 'visudo -cf %s'
+
+- name: Install Misc Packages
+  include_vars:
+    file: '../pkgs/flav_luzey.yml'
+
+- name: Install basic packages
+  kewlfft.aur.aur:
+    use: yay
+    name: '{{ misc_packages }}'
+    state: present
+
+- name: Enable misc package services
+  service:
+     name: '{{ misc_services }}'
+     enabled: yes
+
+- name: Get supported version
+  shell: /lib/ld-linux-x86-64.so.2 --help | grep -m 1 "supported" | awk '{match($0, /[a-z0-9-]+/); print substr($0, RSTART, RLENGTH)}'
+  register: packageversions
+
+# TODO: ...
+#- name: Install EEDVF Kernel
+#  become: yes
