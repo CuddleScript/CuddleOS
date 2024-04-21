@@ -1,15 +1,19 @@
-- name: Recieve permission
-  become: true
-
+---
 - name: Set swappieness
   template:
      src: ../templates/swappiness.conf.j2
      dest: /etc/sysctl.d/99-swappiness.conf
-  notify: Apply sysctl settings
 
-  handlers:
-     - name: Apply sysctl settings
-       command: sysctl --system
+- name: Apply sysctl settings
+  shell: sysctl --system
 
-- name: Check Esync
-  command: echo ulimit -Hn
+- name: SetVar Stuff
+  shell: 'ulimit -Hn'
+  register: esync_value
+  check_mode: false
+
+- name: Fix Esync Value
+  shell: |
+     echo "DefaultLimitNOFILE=1024:1048576" | sudo tee /etc/systemd/system.conf && \
+     echo "DefaultLimitNOFILE=1024:1048576" | sudo tee /etc/systemd/user.conf
+  when: esync_value.stdout <= "524288"
