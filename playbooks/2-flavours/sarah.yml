@@ -11,21 +11,21 @@
 - name: Allow the `aur_builder` user to run `sudo pacman` without a password
   become: yes
   lineinfile:
-    path: /etc/sudoers.d/11-install-aur_builder
-    line: 'aur_builder ALL=(ALL) NOPASSWD: /usr/bin/pacman'
-    create: yes
-    mode: 0644
-    validate: 'visudo -cf %s'
+     path: /etc/sudoers.d/11-install-aur_builder
+     line: 'aur_builder ALL=(ALL) NOPASSWD: /usr/bin/pacman'
+     create: yes
+     mode: 0644
+     validate: 'visudo -cf %s'
 
 - name: Install Misc Packages
   include_vars:
-    file: '../pkgs/flav_luzey.yml'
+     file: '../pkgs/flav_luzey.yml'
 
 - name: Install basic packages
   kewlfft.aur.aur:
-    use: yay
-    name: '{{ misc_packages }}'
-    state: present
+     use: yay
+     name: '{{ misc_packages }}'
+     state: present
 
 - name: Enable misc package services
   service:
@@ -36,6 +36,12 @@
   shell: /lib/ld-linux-x86-64.so.2 --help | grep -m 1 "supported" | awk '{match($0, /[a-z0-9-]+/); print substr($0, RSTART, RLENGTH)}'
   register: packageversions
 
+- name: Install WM and DE
+  kewlfft.aur.aur:
+     use: yay
+     name: '{{ wm_and_de_shenanigans }}'
+     enabled: yes
+     
 # TODO: ...
 #- name: Install EEDVF Kernel
 #  become: yes
