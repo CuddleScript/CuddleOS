@@ -18,12 +18,12 @@
       become: yes
       import_tasks: 'playbooks/1-install/tweaks.yml'
 
-    - name: Import Lucys preset if chosen
-      become: yes
-      import_tasks: 'playbooks/2-flavours/luzey.yml'
-      when: flavour|string == "luzey"
+    - #name: Import Lucys preset if chosen
+      #become: yes
+      #import_tasks: 'playbooks/2-flavours/luzey.yml'
+      #when: flavour|string == "luzey"
 
-    - name: Import Sarahs preset if chosen
-      become: yes
-      import_tasks: 'playbooks/2-flavours/sarah.yml'
-      when: flavour|string == "sarah"
+    - #name: Import Sarahs preset if chosen
+      #become: yes
+      #import_tasks: 'playbooks/2-flavours/sarah.yml'
+      #when: flavour|string == "sarah"

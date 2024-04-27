@@ -1,30 +1,9 @@
 ---
-yay_packages:
-   - ananicy-cpp
-   - irqbalance
-   - nohang
-   - preload
-   - prelockd
-   - uresourced
-   - pipewire-pulse
-   - pipewire-jack
-   - lib32-pipewire-jack
-   - alsa-plugins
-   - alsa-firmware
-   - sof-firmware
-   - alsa-card-profiles
-   - llvm 
-   - clang 
-   - lld 
-   - mold 
-   - openmp
-   - ccache
-   - dbus-broker
-   - uksmd
-   - realtime-privileges
+pacman:
+
+yay:
 
 services:
-   - ananicy-cpp
    - irqbalance
    - memavaild
    - nohang

@@ -8,53 +8,158 @@
       'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v3-mirrorlist-18-1-any.pkg.tar.zst' \
       'https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-v4-mirrorlist-6-1-any.pkg.tar.zst' \
       'https://mirror.cachyos.org/repo/x86_64/cachyos/pacman-6.1.0-5-x86_64.pkg.tar.zst'
- 
+
 - name: Full system upgrade
   pacman:
      update_cache: true
      upgrade: true
- 
-- name: Install base-devel and git
+
+- name: Install Basic Packages
   pacman:
     name:
       - base-devel
       - git
-    state: present
-    reason: explicit
-    reason_for: all
- 
-- name: Include basic package list
-  include_vars:
-     file: '../pkgs/system.yaml'
- 
-- name: Install Basic Packages
-  pacman:
-    name: '{{ basic_packages }}'
-    state: present
-    reason: explicit
-    reason_for: all
- 
-- name: Check GPU Vendor
-  shell: lspci | grep -i VGA | awk '!/NVIDIA|AMD|Intel/'
-  register: gpu_info
- 
-- name: Include GPU vendor-specific package list
-  include_vars:
-     file: '../pkgs/system_gpu.yaml'
+      - python
+      - glib2
+      - glibc
+      - glibc-locales
+      - ninja
+      - llvm
+      - meson
+      - nano
+      - libnotify
+      - libnotify-docs
+      - po4a
+      - jansson
+      - jshon
+      - wget
+      - acpid
+      - irqbalance
+      - sof-firmware
 
-- name: Set GPU Vendor Facts
-  set_fact:
-     gpu_vendor: >-
-        {{ ('NVIDIA' if 'NVIDIA' in gpu_info.stdout else
-           'Intel' if 'Intel' in gpu_info.stdout else
-           'AMD' if 'AMD' in gpu_info.stdout else
-           'Unknown') | trim }}
-     gpu_packages: {'AMD': '{{ amd_packages }}', 'NVIDIA': '{{ nvidia_packages }}', 'Intel': '{{ intel_packages }}'}
+      - lib32-alsa-lib
+      - alsa-lib
+      - lib32-alsa-plugins
+      - alsa-plugins
+      - alsa-utils
+      - alsa-firmware
+      - alsa-card-profiles
 
-- name: Install GPU Drivers
-  pacman:
-    name: '{{ gpu_packages[gpu_vendor] }}'
+      - udisks2
+      - udisks2-btrfs
+      - udisks2-lvm2
+      - ntfs-3g
+
+      - btop
+      - neofetch
+
+      - bzip2
+      - bzip3
+      - gzip
+      - lrzip
+      - lz4
+      - lzip
+      - lzop
+      - xz
+      - zstd
+
+      - unrar
+      - zip
+      - unzip
+      - unarchiver
+      - unace
+      - expac
+
+      - net-tools
+      - xdg-user-dirs
+      - xf86-input-synaptics
+      - xf86-input-libinput
+      - xf86-input-evdev
+
+      - libpipewire
+      - lib32-pipewire
+      - libwireplumber
+
+      - mesa
+      - lib32-mesa
+      - vulkan-icd-loader
+      - lib32-vulkan-icd-loader
+
+      - pipewire
+      - lib32-pipewire
+      - pipewire-v4l2
+      - lib32-pipewire-v4l2
+      - pipewire-jack
+      - lib32-pipewire-jack
+      - pipewire-pulse
+
+      - wireplumber
+      - wireplumber-docs
+
+      - easyeffects
+      - realtime-privileges
+
+      - noto-fonts
+      - noto-fonts-cjk
+      - ttf-dejavu
+      - ttf-liberation
+      - ttf-opensans
     state: present
     reason: explicit
     reason_for: all
-  when: gpu_vendor|string != "Unknown"
+
+- name: Create the `aur_builder` user
+  become: yes
+  user:
+    name: aur_builder
+    create_home: yes
+    group: wheel
+
+- name: Allow the `aur_builder` user to run `sudo pacman` without a password
+  become: yes
+  lineinfile:
+    path: /etc/sudoers.d/11-install-aur_builder
+    line: 'aur_builder ALL=(ALL) NOPASSWD: /usr/bin/pacman'
+    create: yes
+    mode: 0644
+    validate: 'visudo -cf %s'
+
+- name: Remove old nano
+  community.general.pacman:
+    name: nano
+    state: absent
+    force: true
+
+- name: Install Basic Packages ft. AUR
+  kewlfft.aur.aur:
+    use: yay
+    name:
+      - nohang
+      - preload
+      - prelockd
+      - memavaild
+      - uresourced
+      - nano-git
+      - nano-syntax-highlighting-git
+      - freetype2-cleartype
+  become: yes
+  become_user: aur_builder
+
+- name: Upgrade the system using yay, yay!
+  kewlfft.aur.aur:
+    upgrade: yes
+    use: yay
+    aur_only: yes
+  become: yes
+  become_user: aur_builder
+
+# smol example weewoo ~luzey
+# Skip if it is already installed
+#- name: Install gnome-shell-extension-caffeine-git using pikaur and a local PKGBUILD.
+#  kewlfft.aur.aur:
+#    name: gnome-shell-extension-caffeine-git
+#    use: pikaur
+#    local_pkgbuild: {{ role_path }}/files/gnome-shell-extension-caffeine-git
+#    state: present
+#  become: yes
+#  become_user: aur_builder
