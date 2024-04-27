@@ -19,17 +19,17 @@
 
 - name: Install Misc Packages
   include_vars:
-     file: '../pkgs/flav_luzey.yml'
+    file: '../pkgs/flav_sarah.yml'
 
 - name: Install basic packages
   kewlfft.aur.aur:
-     use: yay
-     name: '{{ misc_packages }}'
-     state: present
+    use: yay
+    name: '{{ yay_packages }}'
+    state: present
 
 - name: Enable misc package services
   service:
-     name: '{{ misc_services }}'
+     name: '{{ services }}'
      enabled: yes
 
 - name: Get supported version

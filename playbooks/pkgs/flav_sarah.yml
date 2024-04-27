@@ -8,8 +8,6 @@ yay_packages:
    - prelockd
    - uresourced
    - pipewire-pulse
-   - pipewire-jack
-   - lib32-pipewire-jack
    - alsa-plugins
    - alsa-firmware
    - sof-firmware
@@ -22,10 +20,8 @@ yay_packages:
    - ccache
    - dbus-broker
    - uksmd
-   - realtime-privileges
 
 services:
-   - ananicy-cpp
    - irqbalance
    - memavaild
    - nohang

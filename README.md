@@ -30,7 +30,7 @@ First of all, clone the repository:
 Our next step is running the install script:  
 `cd ./CuddleOs ; chmod +x install.sh ; sh install.sh`
 
-Now let it run and we are good-to-go! :D
+Now let it run and we are good-to-go! :D  
 If you experience any issues you can do following things:  
 [Open a Issue](https://github.com/CuddleScript/CuddleOs/issues) or [Fix it yourself](https://github.com/CuddleScript/CuddleOs/pulls). \:\)
 

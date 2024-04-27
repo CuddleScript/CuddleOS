@@ -1,3 +1,19 @@
+- name: Create the `aur_builder` user
+  become: yes
+  user:
+    name: aur_builder
+    create_home: yes
+    group: wheel
+
+- name: Allow the `aur_builder` user to run `sudo pacman` without a password
+  become: yes
+  lineinfile:
+    path: /etc/sudoers.d/11-install-aur_builder
+    line: 'aur_builder ALL=(ALL) NOPASSWD: /usr/bin/pacman'
+    create: yes
+    mode: 0644
+    validate: 'visudo -cf %s'
+
 - name: Check if HDD or SSD
   shell: 'cat /sys/block/sda/queue/rotational'
   register: is_ssd
@@ -7,57 +23,203 @@
   when: is_ssd.stdout|int == 0
 
 - name: Set swappiness
-  become: yes
-  template:
-     src: ./../templates/swappiness.conf.j2
-     dest: /etc/sysctl.d/99-swappiness.conf
-
-- name: Apply system-control settings
-  shell: sysctl --system
+  ansible.posix.sysctl:
+    name: vm.swappiness
+    value: '10'
+    sysctl_file: '/etc/sysctl.conf'
+    state: present
+    reload: true
 
 - name: Set Esync variables
   shell: 'ulimit -Hn'
-  become: yes
   register: esync_value
   check_mode: false
 
 - name: Fix Esync values
-  become: yes
   shell: |
-     echo "DefaultLimitNOFILE=1024:1048576" | tee /etc/systemd/system.conf && \
-     echo "DefaultLimitNOFILE=1024:1048576" | tee /etc/systemd/user.conf
-  when: esync_value.stdout|int >= 524288
+    echo "DefaultLimitNOFILE=1024:1048576" | tee /etc/systemd/system.conf
+    echo "DefaultLimitNOFILE=1024:1048576" | tee /etc/systemd/user.conf
+  when: esync_value.stdout|int <= 524288
+
+- name: Taming journalctl
+  shell: |
+    touch /etc/systemd/journald.conf.d/fw-tty12.conf
+    journalctl --vacuum-size=100M
+    journalctl --vacuum-time=2weeks
+    echo -e "[Journal]\nForwardToConsole=yes\nTTYPath=/dev/tty12\nMaxLevelConsole=info" | sudo tee /etc/systemd/journald.conf.d/fw-tty12.conf > /dev/null
+    systemctl restart systemd-journald.service
 
 - name: Disable systemd-oomd
   service:
-     name: 'systemd-oomd'
-     enabled: no
+    name: 'systemd-oomd'
+    enabled: no
 
-- name: Setting up I/O Schedulers
-  become: yes
+# https://gist.github.com/keithchambers/80b60559ad83cebf1672
+- name: Set noop or none as scheduler
+  shell: "printf 'noop\nnone' > /sys/block/{{ item }}/queue/scheduler 2> /dev/null || true"
+  when: "ansible_devices[item].scheduler_mode != ''"
+  changed_when: "ansible_devices[item].scheduler_mode not in ['none', 'noop']"
+  with_items: "{{ ansible_devices }}"
+
+- name: Setting up I/O -schedulers
   template:
-     src: ./../templates/60-ioschedulers.rules.j2
-     dest: /etc/udev/rules.d/60-ioschedulers.rules
+    src: ../templates/60-ioschedulers.rules.j2
+    dest: /etc/udev/rules.d/60-ioschedulers.rules
 
 - name: Enable keyring timer
-  become: yes
   service:
-     name: 'archlinux-keyring-wkd-sync.timer'
-     enabled: yes
+    name: 'archlinux-keyring-wkd-sync.timer'
+    enabled: yes
 
-- name: Pacman Config Tweaks
-  become: yes
+- name: Pacman config tweaks
+  shell: |
+     sed -iEr "s/ *#ParallelDownloads *= *[0-9]* */ParallelDownloads=12/g" /etc/pacman.conf
+     sed -iEr "s/ *#DisableDownloadTimeout */DisableDownloadTimeout/g" /etc/pacman.conf
+     sed -iEr "s/ *#Color */Color/g" /etc/pacman.conf
+
+- name: Pre - Pacman config tweaks
+  shell: grep -E 'Color|ParallelDownloads|DisableDownloadTimeout' /etc/pacman.conf
+  register: pacman_config_values
+
+- name: Pacman config tweaks I
   lineinfile:
-     path: /etc/pacman.conf
-     regexp: '/#ParallelDownloads/i'
-     line: 'ParallelDownloads=6 \n DisableDownloadTimeout'
+    path: /etc/pacman.conf
+    insertafter: '\[options\]'
+    line: ParallelDownloads=12
+  when: "'ParallelDownloads=12' not in pacman_config_values.stdout_lines"
+
+- name: Pacman config tweaks II
+  lineinfile:
+    path: /etc/pacman.conf
+    insertafter: 'ParallelDownloads=12'
+    line: DisableDownloadTimeout
+  when: "'DisableDownloadTimeout' not in pacman_config_values.stdout_lines"
+
+- name: Pacman config tweaks III
+  lineinfile:
+    path: /etc/pacman.conf
+    insertafter: 'DisableDownloadTimeout'
+    line: Color
+  when: "'Color' not in pacman_config_values.stdout_lines"
 
 - name: Enable realtime privileges
-  become: yes
   shell: 'usermod -aG realtime "$(whoami)"'
 
 - name: change environment
-  become: yes
   shell: |
      echo "mesa_glthread=true" | tee /etc/environment
      echo "__GL_THREADED_OPTIMIZATIONS=1" | tee /etc/environment
+
+- name: Check GPU Vendor
+  shell: lspci | grep -i VGA | awk '!/NVIDIA|AMD|Intel/'
+  register: gpu_info
+
+- name: Include GPU vendor-specific package list
+  set_fact:
+    amd_pacman:
+      - 'libva-mesa-driver'
+      - 'lib32-libva-mesa-driver'
+      - 'mesa-vdpau'
+      - 'lib32-mesa-vdpau'
+      - 'libva-vdpau-driver'
+      - 'lib32-libva-vdpau-driver'
+      - 'vulkan-radeon'
+      - 'lib32-vulkan-radeon'
+      - 'mesa'
+      - 'lib32-mesa'
+      - 'mesa-vdpau'
+      - 'lib32-mesa-vdpau'
+      - 'vulkan-radeon'
+      - 'lib32-vulkan-radeon'
+      - 'glu'
+      - 'lib32-glu'
+      - 'vulkan-icd-loader'
+      - 'lib32-vulkan-icd-loader'
+    amd_yay:
+      - 'radeon-profile-daemon-git'
+      - 'radeon-profile-git'
+    nvidia_pacman:
+      - 'nvidia-dkms'
+      - 'nvidia'
+      - 'nvidia-settings'
+      - 'nvidia-utils'
+      - 'lib32-nvidia-utils'
+      - 'opencl-nvidia'
+      - 'lib32-opencl-nvidia'
+      - 'libvdpau'
+      - 'libxnvctrl'
+      - 'vulkan-icd-loader'
+      - 'lib32-vulkan-icd-loader'
+    nvidia_yay:
+      - 'xorg-xwayland-explicit-sync-git'
+    intel_pacman:
+      - 'mesa'
+      - 'lib32-mesa'
+      - 'glu'
+      - 'lib32-glu'
+      - 'vulkan-icd-loader'
+      - 'lib32-vulkan-icd-loader'
+    intel_yay:
+      - 'xorg-xwayland-explicit-sync-git'
+    shared_pacman:
+      - base-devel
+    shared_yay:
+      - 'xorg-xwayland-explicit-sync-git'
+
+- name: Set GPU Vendor Facts I
+  set_fact:
+    gpu_vendor: >-
+      {{ ('NVIDIA' if 'NVIDIA' in gpu_info.stdout else
+         'Intel' if 'Intel' in gpu_info.stdout else
+         'AMD' if 'AMD' in gpu_info.stdout else
+         'Unknown') | trim }}
+    gpu_pacman: {
+      'AMD': '{{ amd_pacman }}',
+      'NVIDIA': '{{ nvidia_pacman }}',
+      'Intel': '{{ intel_pacman }}',
+      'Shared': '{{ shared_pacman }}'
+    }
+    gpu_yay: {
+      'AMD': '{{ amd_yay }}',
+      'NVIDIA': '{{ nvidia_yay }}',
+      'Intel': '{{ intel_yay }}',
+      'Shared': '{{ shared_yay }}'
+    }
+
+- name: Install GPU Drivers - Shared I
+  pacman:
+    name: "{{ gpu_pacman['Shared'] }}"
+    state: present
+    reason: explicit
+    reason_for: all
+
+# TODO: fix
+#- name: Install GPU Drivers - Shared II
+#  kewlfft.aur.aur:
+#    use: yay
+#    name: "{{ gpu_yay['Shared'] }}"
+#  become: yes
+#  become_user: aur_builder
+
+- name: Install GPU Drivers - Vendor I
+  pacman:
+    name: '{{ gpu_pacman[gpu_vendor] }}'
+    state: present
+    reason: explicit
+    reason_for: all
+  when: gpu_vendor|string != "Unknown"
+
+# TODO: fix
+#- name: Install GPU Drivers - Vendor II
+#  kewlfft.aur.aur:
+#    name: '{{ gpu_yay[gpu_vendor] }}'
+#  become: yes
+#  become_user: aur_builder
+
+#- name: Add tweaks for nvidia graphics
+#  shell: |
+#     echo " \
+#      options nvidia NVreg_UsePageAttributeTable=1 NVreg_InitializeSystemMemoryAllocations=0 NVreg_DynamicPowerManagement=0x02\n \
+#      options nvidia_drm modeset=1 fbdev=1" > /etc/modprobe.d/nvidia.conf \
+#     "
+#  when: gpu_vendor|string == "NVIDIA"

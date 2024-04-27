@@ -1,8 +1,0 @@
-collections:
-   # https://github.com/ansible-collections/community.general
-   - name: community.general
-     version: 8.5.0
-
-   # https://github.com/kewlfft/ansible-aur
-   - name: kewlfft.aur
-     version: 0.11.1
