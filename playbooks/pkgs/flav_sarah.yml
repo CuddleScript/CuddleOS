@@ -1,6 +1,7 @@
 ---
 yay_packages:
-   - ananicy-cpp
+   - gamemode
+   - lib32-gamemode
    - irqbalance
    - nohang
    - preload
@@ -13,10 +14,10 @@ yay_packages:
    - alsa-firmware
    - sof-firmware
    - alsa-card-profiles
-   - llvm 
-   - clang 
-   - lld 
-   - mold 
+   - llvm
+   - clang
+   - lld
+   - mold
    - openmp
    - ccache
    - dbus-broker
@@ -32,7 +33,23 @@ services:
    - prelockd
    - uresourced
    - uksmd
-   - pipewire 
-   - pipewire.socket 
-   - pipewire-pulse 
+   - pipewire
+   - pipewire.socket
+   - pipewire-pulse
    - wireplumber
+   -
+wm_and_de_shenanigans:
+   - xdg-desktop-portal-hyprland-git
+   - rofi
+   - kitty
+   - dunst
+   - waybar-git
+   - swaync
+   - hyprland
+   - neofetch
+   - starship
+   - swaybg-git
+   - thunar
+   - nano
+   - nano-syntax-highlighting
+   - aria2c
